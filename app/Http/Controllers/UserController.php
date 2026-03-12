@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class UserController extends Controller
 {
@@ -40,7 +41,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         try {
-            $validator = Validator::make($request->only(['name', 'email', 'password']), [
+            $validator = Validator::make($request->only(['name', 'email', 'password', 'password_confirmation']), [
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
                 'password' => 'required|string|confirmed|min:8',
@@ -234,7 +235,9 @@ class UserController extends Controller
 
             $credentials = $request->only('email', 'password');
 
-            if (!($token = auth()->attempt($credentials))) {
+            $user = User::where('email', $credentials['email'])->first();
+
+            if (! $user || ! $token = JWTAuth::attempt($credentials)) {
                 return response()->json(
                     [
                         'success' => false,
@@ -247,6 +250,7 @@ class UserController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Login successful',
+                'user' => $user,
                 'token' => $token,
             ]);
         } catch (\Throwable $th) {
